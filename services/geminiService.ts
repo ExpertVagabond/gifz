@@ -8,7 +8,11 @@
 import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
 import { Frame } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = process.env.API_KEY;
+if (!apiKey) {
+  throw new Error('API_KEY env var required');
+}
+const ai = new GoogleGenAI({ apiKey });
 const imageModel = 'gemini-2.5-flash-image-preview';
 
 export interface AnimationAssets {
@@ -81,13 +85,13 @@ export const generateAnimationAssets = async (
                 }
             }
         } catch (e) {
-            console.warn("Could not parse frame duration from model response. Using default.", e);
+            console.warn("Could not parse frame duration from model response. Using default.");
         }
     }
 
     return { imageData, frames: [], frameDuration };
   } catch (error) {
-    console.error("Error during asset generation:", error);
-    throw new Error(`Failed to process image. ${error instanceof Error ? error.message : ''}`);
+    console.error("Error during asset generation");
+    throw new Error('Failed to process image. Please try again with different input.');
   }
 };
