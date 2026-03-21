@@ -3,6 +3,43 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+// ── Security: constants & validation ──────────────────────────────────
+const MAX_PROMPT_LENGTH = 2_000;
+const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+function sanitizeError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg
+    .replace(/\/[^\s]+\//g, "[path]/")
+    .replace(/(key|token|secret)\s*[:=]\s*\S+/gi, "$1=[REDACTED]")
+    .slice(0, 300);
+}
+
+function validatePromptInput(text: string): string {
+  if (text.length > MAX_PROMPT_LENGTH) {
+    throw new Error(`Prompt exceeds ${MAX_PROMPT_LENGTH} characters`);
+  }
+  // Strip control characters except newlines/tabs
+  return text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
+}
+
+function validateImageDataUrl(dataUrl: string): string {
+  const match = dataUrl.match(/^data:(image\/\w+);base64,/);
+  if (!match) {
+    throw new Error("Invalid image data URL format");
+  }
+  if (!ALLOWED_IMAGE_TYPES.has(match[1])) {
+    throw new Error(`Unsupported image type: ${match[1]}`);
+  }
+  // Estimate decoded size from base64 length
+  const base64Part = dataUrl.split(",")[1] || "";
+  const estimatedSize = (base64Part.length * 3) / 4;
+  if (estimatedSize > MAX_IMAGE_SIZE_BYTES) {
+    throw new Error(`Image exceeds ${MAX_IMAGE_SIZE_BYTES / (1024 * 1024)} MB limit`);
+  }
+  return dataUrl;
+}
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { AppState } from './types';
